@@ -16,12 +16,12 @@ The root cause of the flaw is the lack of appropriate measurements to prevent a 
 ## POC Details
 This POC demonstrates how an attacker can use a simple script to flood Spotify's servers with fake reports against a public playlist, effectively taking it down immediately.
 
-The POC code is available in the `headless.py` file. The file contains detailed instructions on how to use the script, including the required parameters and configuration options.
+The POC code is available in the `dossify.py` file. The file contains detailed instructions on how to use the script, including the required parameters and configuration options.
 
 1. Install requirements `pip install -r requirements.txt'
-2. Set up your email provider and anti-captcha.com API key in `headless.py` file
+2. Set up your email provider and anti-captcha.com API key in `dossify.py` file
 2. Enter the playlist id's you want to take down in `playlists.txt` (only the ID, remove the domain and si parameter)
-3. Run  `python3 headless.py`
+3. Run  `python3 dossify.py`
 4. ....
 5. Watch the playlist disappear
 
