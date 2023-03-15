@@ -1,4 +1,4 @@
-# Dossify: Denial of Service on Public Playlists
+# Dossify: Denial of Service on Public Spotify Playlists
 This is a proof-of-concept (POC) for a design flaw discovered in Spotify's playlist reporting feature. The flaw allows an attacker to cause a denial of service (DoS) / availability issue by exploiting a weakness in the playlist reporting mechanism, effectively making a playlist disappear until the creator changes the name of the playlist.
 
 ## Background
