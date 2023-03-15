@@ -33,7 +33,7 @@ Another control in place is Recaptchav2, which is an outdated method for defendi
 
 ## Mitigation
 
-To "keep your playlist online" I created another script called `keepmeup.py` which will be added later to this repository. This script will continuously update the name of the playlist, putting it back 'online' after fake reports.
+To "keep your playlist online" I created another script called `keepmeup.py` which will be added later to this repository. This script will continuously update the name of the playlist, putting it back 'online' after fake reports. Instructions are in the file.
 
 ## Reporting and Disclosure
 The flaw was reported to Spotify's security team through their vulnerability disclosure problem, but it was not considered a security vulnerability. As a result, the flaw was not patched, and the POC is being published to raise awareness about the issue.
