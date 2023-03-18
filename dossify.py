@@ -84,6 +84,16 @@ def takedown(playlistid):
     if r.status_code == 200 or r.status_code == 201:
         print("[!] Playlist taken down successfully, costs of takedown: $ " +
               str(user_answer['cost']))
+        # Report correct captcha back to anti-captcha.com (this improves speed for the next request)
+        response = requests.post('https://api.anti-captcha.com/reportCorrectRecaptcha', headers={'Accept': 'application/json','Content-Type': 'application/json',}, json={'clientKey': ANTICAPTCHA_KEY, 'taskId': user_answer['taskId'],})
+    else:
+        print(r.text)
+        # if the captcha key is incorrect (CHECK SITE KEY!!!) report to anticaptcha to get a refund
+        if "CAPTCHA" in r.text:
+            print(requests.post('https://api.anti-captcha.com/reportIncorrectRecaptcha', headers={'Accept': 'application/json','Content-Type': 'application/json',}, json={'clientKey': ANTICAPTCHA_KEY, 'taskId': user_answer['taskId'],}).json())
+            # very ugly, but try this playlist agian
+            takedown(playlistid)
+        
 
 
 if __name__ == '__main__':
