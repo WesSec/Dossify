@@ -14,7 +14,6 @@
 import requests
 import time
 import base64
-import webbrowser
 
 
 # Create an app at https://developer.spotify.com/dashboard/applications
@@ -22,13 +21,15 @@ clientId = "<clientID>"
 clientSecret = "<ClientSecret>"
 
 # all values must be filled, if you like something to be empty (eg description, just put in a dot or remove it from json_data)
-playlist_name = "<Desired playlist name>"
-playlist_description = "You cant take me down"
+playlist_name = "<playlist name>"
+playlist_description = "<playlist description>"
 # only the ID, do not include "spotify:playlist:"
-playlist_id = "<playlistID>"
-# Interval on how often to update the playlist name, spotify's ratelimit is calculated in a rolling 30 sec window, so 30 secs should always be fine
-interval = 60
-
+playlist_id = "<playlist ID>"
+# Settings for intervallign and steps
+interval = 0.5
+max_interval = 30
+backoff_factor = 2
+decrease_factor = 0.5
 
 def authorize():
     # Set up the authentication parameters
@@ -68,13 +69,69 @@ def authorize():
 def refresh_token(token_url, token_payload, token_headers):
     token_response = requests.post(
         token_url, data=token_payload, headers=token_headers)
-    return token_response.json()['access_token']
+    access_token = token_response.json()['access_token']
+    refresh_token = token_response.json()['refresh_token']
+    return access_token, refresh_token
 
+
+def refresh_token2(refresh_token):
+    auth_client = clientId + ":" + clientSecret
+    auth_encode = 'Basic ' + base64.b64encode(auth_client.encode()).decode()
+
+    headers = {
+        'Authorization': auth_encode,
+    }
+
+    data = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token
+    }
+
+    response = requests.post('https://accounts.spotify.com/api/token',
+                             data=data, headers=headers)  # sends request off to spotify
+
+    if (response.status_code == 200):  # checks if request was valid
+        print("The request went through; we got a status 200; Spotify token refreshed")
+        response_json = response.json()
+        new_expire = response_json['expires_in']
+        print("the time left on new token is: " + str(new_expire / 60) + "min")  # says how long
+        return response_json["access_token"]
+    else:
+        print("ERROR! The response we got was: " + str(response))
+
+
+def get_playlist_name(playlist_id, token):
+    global interval
+    headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {token}',
+        }
+    response = requests.get(
+            f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=headers)
+    
+    #Ratelimit protection
+    if response.status_code == 429:
+        # API rate limit reached, sleep for the current interval
+        time.sleep(interval)
+        
+        # Increase the interval for the next call
+        interval = min(interval * backoff_factor, max_interval)
+        print(f"[i] ratelimit hit, increased interfal to {interval}")
+        return False
+    
+    
+    if response.json()['name'] == playlist_name:
+        # API call was successful, decrease the interval slightly
+        interval = max(interval * decrease_factor, 1)
+        return False
+    else:
+        return True
 
 if __name__ == "__main__":
     token_url, token_payload, token_headers = authorize()
-    token = refresh_token(token_url, token_payload, token_headers)
+    token, refresh_tok = refresh_token(token_url, token_payload, token_headers)
     last_refresh_time = time.time()
+
     while True:
         # Prepare headers
         headers = {
@@ -86,29 +143,13 @@ if __name__ == "__main__":
             'description': f'{playlist_description}',
             'public': True,
         }
+        if get_playlist_name(playlist_id, token):
         # Update playlist name
-        response = requests.put(
-            f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=headers, json=json_data)
-        # if you like to debug:
-        # print(response.status_code, response.text)
-        if response.status_code == 200:
-            print(
-                f"[i] {time.strftime('%H:%M', time.localtime(time.time()))} - Updated name for playlist {playlist_name}")
-        if response.status_code == 403:
-            print(
-                "[!] Something went wrong with authorizing, please check your clientID and Client Secret")
-            break
-        # If ratelimit is hit, sleep some more
-        if response.status_code == 429:
-            print("[!] Ratelimit hit, pausing for 30 more secs")
-            time.sleep(30)
-        # I think tokens need to be refreshed every hour, so
-        if time.time() - last_refresh_time >= 3480:  # 58 minutes in seconds
-            token = refresh_token(token_url, token_payload, token_headers)
-            last_refresh_time = time.time()  # Update last refresh time
-        # if for some reason the token fails, get a new one too
-        if response.status_code == 401:
-            print("[!] Token expired")
-            token = refresh_token(token_url, token_payload, token_headers)
-        # Do some sleepy
-        time.sleep(interval)
+            response = requests.put(
+                f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=headers, json=json_data)
+            if response.status_code == 200:
+                print(f"[i] {time.strftime('%H:%M', time.localtime(time.time()))} - Updated name for playlist {playlist_name}")
+        else:
+            # print(f"[i] playlist still intact")
+            time.sleep(interval)
+            pass
